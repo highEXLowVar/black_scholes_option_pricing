@@ -1,1 +1,8 @@
-".vscode/" 
+# editor junk
+.vscode/
+
+# build artifacts, no point versioning a compiled binary
+option_pricing
+*.exe
+*.o
+*.out
