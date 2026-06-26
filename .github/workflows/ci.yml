@@ -1,0 +1,77 @@
+# build the pricer on all three big platforms and run its self tests on every
+# push. on a version tag (v1.2.3 etc) it also attaches the compiled binaries to
+# the github release, so theres always a fresh build to download.
+name: ci
+
+on:
+  push:
+    branches: [ master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-and-test:
+    name: build + selftest (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  asset: option_pricing-linux-x64,   ext: '' }
+          - { os: windows-latest, asset: option_pricing-windows-x64, ext: '.exe' }
+          - { os: macos-latest,   asset: option_pricing-macos-arm64, ext: '' }
+    steps:
+      - uses: actions/checkout@v4
+
+      # cmake + a default compiler are preinstalled on every runner, so theres
+      # nothing to apt-get. linux gets gcc, windows gets msvc, mac gets clang
+      - name: configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: build
+        run: cmake --build build --config Release
+
+      - name: run the self tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      # rename the binary so the three platforms dont clash as artifacts
+      - name: stage the binary
+        shell: bash
+        run: |
+          cmake --install build --config Release --prefix dist
+          cp "dist/bin/option_pricing${{ matrix.ext }}" "${{ matrix.asset }}${{ matrix.ext }}"
+
+      - name: upload the binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}${{ matrix.ext }}
+
+  release:
+    name: attach binary to release (${{ matrix.os }})
+    needs: build-and-test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write   # needed to create/update the release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  asset: option_pricing-linux-x64,   ext: '' }
+          - { os: windows-latest, asset: option_pricing-windows-x64, ext: '.exe' }
+          - { os: macos-latest,   asset: option_pricing-macos-arm64, ext: '' }
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --config Release
+      - name: stage the binary under its release name
+        shell: bash
+        run: |
+          cmake --install build --config Release --prefix dist
+          cp "dist/bin/option_pricing${{ matrix.ext }}" "${{ matrix.asset }}${{ matrix.ext }}"
+      - name: attach to the github release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}${{ matrix.ext }}

@@ -6,3 +6,7 @@ option_pricing
 *.exe
 *.o
 *.out
+
+# cmake / ci output dirs
+build/
+dist/

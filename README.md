@@ -1,5 +1,7 @@
 # Black-Scholes Option Pricer
 
+[![ci](https://github.com/highEXLowVar/black_scholes_option_pricing/actions/workflows/ci.yml/badge.svg)](https://github.com/highEXLowVar/black_scholes_option_pricing/actions/workflows/ci.yml)
+
 A small C++ library and command line tool that prices European options with the Black-Scholes model. I first wrote this a while back just to knock the rust off my C++, and I came back to it to turn it into something I would actually want to show people. It now does the full set of Greeks, solves for implied volatility, handles dividends, and checks its own answers.
 
 Everything is plain standard C++17. No external libraries, no build system you have to install first, nothing to download. Two source files and a header.
@@ -40,6 +42,16 @@ g++ -std=c++17 -O2 main.cpp black_scholes.cpp -o option_pricing
 ```
 
 On Windows with MSYS2 / MinGW the same `g++` line works, you just get `option_pricing.exe`.
+
+There is also a CMake build, which is what the CI uses so the thing compiles the same way on Linux, Windows and macOS:
+
+```
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+ctest --test-dir build -C Release    # runs the self tests
+```
+
+Every push is built and self-tested on all three platforms by GitHub Actions, and each run uploads the compiled binary as an artifact. Pushing a version tag (`v1.0.0`) also attaches the Linux, Windows and macOS binaries to a GitHub Release, so you never have to commit a binary to get one.
 
 ## Using it
 
